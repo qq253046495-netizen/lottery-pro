@@ -1,0 +1,30 @@
+name: Update Lottery Data
+
+on:
+  schedule:
+    - cron: "0 13 * * *"   # 每天 UTC 13:00（国内开奖后）抓一次
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Fetch data
+        run: python scripts/fetch_lottery.py
+        env:
+          SOURCE_DLT: ${{ secrets.SOURCE_DLT }}
+          SOURCE_SSQ: ${{ secrets.SOURCE_SSQ }}
+      - name: Commit
+        run: |
+          git config user.email "bot@github.com"
+          git config user.name "lottery-bot"
+          git add data/
+          git commit -m "data: update $(date -u +%Y-%m-%d)" || echo "no changes"
+          git push

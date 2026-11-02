@@ -22,14 +22,19 @@ struct LotteryTabView: View {
     @State private var strategy: Strategy = .balanced
     @State private var rec: (front: [Int], back: [Int])? = nil
     @State private var rng = RNG(seed: 12345)
+    @State private var dataURL: String = ""
+    @State private var netStatus: String = ""
+    @State private var isLoading = false
 
     private var analyzer: Analyzer { Analyzer(type: type, draws: draws) }
+    private var urlKey: String { "lottery_data_url_\(type.rawValue)" }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
                     disclaimer
+                    networkSection
                     recentSection
                     statsSection
                     recommendSection
@@ -43,6 +48,7 @@ struct LotteryTabView: View {
             if draws.isEmpty {
                 draws = generateSampleData(type: type, issues: 200)
             }
+            dataURL = UserDefaults.standard.string(forKey: urlKey) ?? ""
         }
     }
 
@@ -54,6 +60,58 @@ struct LotteryTabView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color(.secondarySystemBackground))
             .cornerRadius(8)
+    }
+
+    private var networkSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("联网数据（实时分析）").font(.headline)
+            TextField("数据源 JSON URL（HTTPS）", text: $dataURL)
+                .textFieldStyle(.roundedBorder)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+                .onChange(of: dataURL) { _, newVal in
+                    UserDefaults.standard.set(newVal, forKey: urlKey)
+                }
+            HStack {
+                Button {
+                    Task { await refresh() }
+                } label: {
+                    if isLoading {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Text("联网更新并分析")
+                    }
+                }
+                .buttonStyle(.bordered)
+                .disabled(isLoading)
+                Spacer()
+                if !netStatus.isEmpty {
+                    Text(netStatus).font(.caption2).foregroundColor(.secondary)
+                }
+            }
+            Text("格式：{\"type\":\"dlt|ssq\",\"draws\":[{\"issue\":1,\"date\":\"2026-01-01\",\"front\":[...],\"back\":[...]}]}")
+                .font(.caption2).foregroundColor(.secondary)
+        }
+        .padding(10)
+        .background(Color(.secondarySystemBackground))
+        .cornerRadius(10)
+    }
+
+    private func refresh() async {
+        guard !dataURL.isEmpty else {
+            netStatus = "请先填写数据源 URL"
+            return
+        }
+        isLoading = true
+        netStatus = "拉取中…"
+        do {
+            let remote = try await LotteryService.fetch(type: type, from: dataURL)
+            draws = remote
+            netStatus = "已更新 \(remote.count) 期"
+        } catch {
+            netStatus = "失败：\(error.localizedDescription)"
+        }
+        isLoading = false
     }
 
     private var recentSection: some View {
