@@ -1,8 +1,8 @@
 name: Update Lottery Data
 
+# 注意：GitHub 云端 runner 在海外，访问中彩网/体彩网经常超时，所以这里只保留手动触发。
+# 日常自动更新由本机 Windows 计划任务 scripts/update_data.bat 负责（国内网络可直连官网）。
 on:
-  schedule:
-    - cron: "0 13 * * *"   # 每天 UTC 13:00（国内开奖后）抓一次
   workflow_dispatch:
 
 permissions:

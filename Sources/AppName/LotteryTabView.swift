@@ -36,6 +36,10 @@ struct LotteryTabView: View {
 
     private var analyzer: Analyzer { Analyzer(type: type, draws: draws) }
     private var urlKey: String { "lottery_data_url_\(type.rawValue)" }
+    // 默认数据源：jsDelivr CDN（国内可达）。GitHub raw 在国内多数网络被墙，故不用。
+    private var defaultURL: String {
+        "https://fastly.jsdelivr.net/gh/qq253046495-netizen/lottery-pro@main/data/\(type.rawValue).json"
+    }
 
     var body: some View {
         NavigationStack {
@@ -60,7 +64,8 @@ struct LotteryTabView: View {
                 draws = LotteryService.loadBundled(type: type)
                     ?? generateSampleData(type: type, issues: 200)
             }
-            dataURL = UserDefaults.standard.string(forKey: urlKey) ?? ""
+            let saved = UserDefaults.standard.string(forKey: urlKey) ?? ""
+            dataURL = saved.isEmpty ? defaultURL : saved
         }
     }
 
@@ -96,6 +101,9 @@ struct LotteryTabView: View {
                 }
                 .buttonStyle(.bordered)
                 .disabled(isLoading)
+                Button("默认源") { dataURL = defaultURL }
+                    .buttonStyle(.bordered)
+                    .font(.caption)
                 Spacer()
                 if !netStatus.isEmpty {
                     Text(netStatus).font(.caption2).foregroundColor(.secondary)
