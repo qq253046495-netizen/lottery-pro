@@ -57,7 +57,8 @@ struct LotteryTabView: View {
         }
         .onAppear {
             if draws.isEmpty {
-                draws = generateSampleData(type: type, issues: 200)
+                draws = LotteryService.loadBundled(type: type)
+                    ?? generateSampleData(type: type, issues: 200)
             }
             dataURL = UserDefaults.standard.string(forKey: urlKey) ?? ""
         }

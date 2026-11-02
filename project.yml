@@ -16,6 +16,8 @@ targets:
     platform: iOS
     sources:
       - path: Sources/AppName
+      - path: data
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.haigui.LotteryPro
