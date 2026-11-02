@@ -1,11 +1,10 @@
-name: AppName
+name: LotteryPro
 options:
-  bundleIdPrefix: com.example
+  bundleIdPrefix: com.haigui
   deploymentTarget:
-    iOS: "15.0"
-packages: {}
+    iOS: "17.0"
 targets:
-  AppName:
+  LotteryPro:
     type: application
     platform: iOS
     sources:
@@ -13,5 +12,5 @@ targets:
     info:
       path: Sources/AppName/Info.plist
       properties:
+        CFBundleDisplayName: 彩票分析
         UILaunchScreen: {}
-        CFBundleDisplayName: AppName

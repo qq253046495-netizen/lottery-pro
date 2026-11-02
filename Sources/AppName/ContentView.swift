@@ -2,16 +2,11 @@ import SwiftUI
 
 struct ContentView: View {
     var body: some View {
-        VStack(spacing: 20) {
-            Image(systemName: "shippingbox.fill")
-                .font(.system(size: 64))
-                .foregroundStyle(.tint)
-            Text("海鸥 IPA Demo")
-                .font(.title.bold())
-            Text("工程链路已打通，等老子把功能塞进来。")
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+        TabView {
+            LotteryTabView(type: .dlt)
+                .tabItem { Label("大乐透", systemImage: "chart.bar.fill") }
+            LotteryTabView(type: .ssq)
+                .tabItem { Label("双色球", systemImage: "die.face.5.fill") }
         }
-        .padding()
     }
 }

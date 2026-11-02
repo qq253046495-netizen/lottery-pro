@@ -24,10 +24,10 @@ jobs:
       - name: Archive (no signing)
         run: |
           xcodebuild archive \
-            -project AppName.xcodeproj \
-            -scheme AppName \
+            -project LotteryPro.xcodeproj \
+            -scheme LotteryPro \
             -configuration Release \
-            -archivePath "$PWD/build/AppName.xcarchive" \
+            -archivePath "$PWD/build/LotteryPro.xcarchive" \
             -destination 'generic/platform=iOS' \
             CODE_SIGN_IDENTITY="-" \
             CODE_SIGNING_REQUIRED=NO \
@@ -37,13 +37,13 @@ jobs:
       - name: Package unsigned IPA
         run: |
           mkdir -p export/Payload
-          cp -R build/AppName.xcarchive/Products/Applications/AppName.app export/Payload/
+          cp -R build/LotteryPro.xcarchive/Products/Applications/LotteryPro.app export/Payload/
           cd export
-          zip -r AppName-unsigned.ipa Payload
+          zip -r LotteryPro-unsigned.ipa Payload
 
       - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AppName-unsigned-ipa
-          path: export/AppName-unsigned.ipa
+          name: LotteryPro-unsigned-ipa
+          path: export/LotteryPro-unsigned.ipa
           if-no-files-found: error
