@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct ContentView: View {
+    @StateObject private var store = TicketStore()
+
     var body: some View {
         TabView {
             LotteryTabView(type: .dlt)
@@ -8,5 +10,6 @@ struct ContentView: View {
             LotteryTabView(type: .ssq)
                 .tabItem { Label("双色球", systemImage: "die.face.5.fill") }
         }
+        .environmentObject(store)
     }
 }

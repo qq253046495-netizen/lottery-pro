@@ -16,11 +16,19 @@ struct Ball: View {
     }
 }
 
+struct Combo: Identifiable {
+    let id = UUID()
+    let front: [Int]
+    let back: [Int]
+}
+
 struct LotteryTabView: View {
     let type: LotteryType
+    @EnvironmentObject var store: TicketStore
+
     @State private var draws: [Draw] = []
     @State private var strategy: Strategy = .balanced
-    @State private var rec: (front: [Int], back: [Int])? = nil
+    @State private var batch: [Combo] = []
     @State private var rng = RNG(seed: 12345)
     @State private var dataURL: String = ""
     @State private var netStatus: String = ""
@@ -37,7 +45,10 @@ struct LotteryTabView: View {
                     networkSection
                     recentSection
                     statsSection
+                    omissionSection
+                    historyCompareSection
                     recommendSection
+                    favoritesSection
                 }
                 .padding()
             }
@@ -160,12 +171,49 @@ struct LotteryTabView: View {
                 .sorted { $0.1 > $1.1 }
                 .prefix(10)
             Chart {
-                ForEach(Array(top10), id: \.0) { n, cnt in
-                    BarMark(x: .value("号", "\(n)"), y: .value("次数", cnt))
+                ForEach(Array(top10), id: \.0) { item in
+                    BarMark(x: .value("号", "\(item.0)"), y: .value("次数", item.1))
                         .foregroundStyle(Color.red)
                 }
             }
             .frame(height: 160)
+        }
+    }
+
+    private var omissionSection: some View {
+        let fo = analyzer.frontOmission()
+        let ranked = fo.sorted { $0.value > $1.value }.prefix(8)
+        let maxMiss = ranked.first?.value ?? 1
+        return VStack(alignment: .leading, spacing: 8) {
+            Text("\(type.frontLabel)遗漏排行").font(.headline)
+            ForEach(Array(ranked), id: \.key) { item in
+                HStack(spacing: 8) {
+                    Ball(number: item.key, color: .blue)
+                    Text("遗漏 \(item.value) 期")
+                        .font(.caption).foregroundColor(.secondary)
+                        .frame(width: 84, alignment: .leading)
+                    ProgressView(value: Double(item.value), total: Double(max(maxMiss, 1)))
+                }
+            }
+        }
+    }
+
+    private var historyCompareSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("历史同期对比").font(.headline)
+            if let last = draws.last, let same = previousYearSameMonth(last: last) {
+                Text("去年同月 第\(same.issue)期（\(same.date)）").font(.caption).foregroundColor(.secondary)
+                HStack(spacing: 3) {
+                    ForEach(same.front, id: \.self) { Ball(number: $0, color: .red) }
+                }
+                HStack(spacing: 3) {
+                    ForEach(same.back, id: \.self) { Ball(number: $0, color: .blue) }
+                }
+                let overlap = Set(last.front).intersection(Set(same.front)).count
+                Text("与最新一期 \(type.frontLabel)重合 \(overlap) 个").font(.caption).foregroundColor(.secondary)
+            } else {
+                Text("样本不足一年，暂无法做同期对比").font(.caption).foregroundColor(.secondary)
+            }
         }
     }
 
@@ -177,24 +225,76 @@ struct LotteryTabView: View {
             }
             .pickerStyle(.segmented)
             Button {
-                rec = analyzer.recommend(strategy: strategy, rng: &rng)
+                batch = (0..<5).map { _ in
+                    let r = analyzer.recommend(strategy: strategy, rng: &rng)
+                    return Combo(front: r.front, back: r.back)
+                }
             } label: {
-                Text("生成推荐号码").frame(maxWidth: .infinity)
+                Text("生成 5 注推荐").frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
-            if let r = rec {
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text(type.frontLabel + "：").foregroundColor(.secondary)
-                        HStack(spacing: 6) { ForEach(r.front, id: \.self) { n in Ball(number: n, color: .red) } }
+
+            ForEach(batch) { c in
+                let saved = store.contains(type: type, front: c.front, back: c.back)
+                HStack(spacing: 6) {
+                    HStack(spacing: 3) {
+                        ForEach(c.front, id: \.self) { Ball(number: $0, color: .red) }
                     }
-                    HStack {
-                        Text(type.backLabel + "：").foregroundColor(.secondary)
-                        HStack(spacing: 6) { ForEach(r.back, id: \.self) { n in Ball(number: n, color: .blue) } }
+                    HStack(spacing: 3) {
+                        ForEach(c.back, id: \.self) { Ball(number: $0, color: .blue) }
+                    }
+                    Spacer()
+                    Button {
+                        if !saved {
+                            store.add(type: type, front: c.front, back: c.back, strategy: strategy.rawValue)
+                        }
+                    } label: {
+                        Image(systemName: saved ? "star.fill" : "star")
+                            .foregroundColor(saved ? .yellow : .gray)
+                    }
+                    .buttonStyle(.borderless)
+                }
+            }
+        }
+    }
+
+    private var favoritesSection: some View {
+        let favs = store.forType(type)
+        return VStack(alignment: .leading, spacing: 8) {
+            Text("我的收藏（\(favs.count)）").font(.headline)
+            if favs.isEmpty {
+                Text("生成的号码点 ☆ 收藏，会出现在这里").font(.caption).foregroundColor(.secondary)
+            } else {
+                ForEach(favs) { t in
+                    HStack(spacing: 6) {
+                        HStack(spacing: 3) {
+                            ForEach(t.front, id: \.self) { Ball(number: $0, color: .red) }
+                        }
+                        HStack(spacing: 3) {
+                            ForEach(t.back, id: \.self) { Ball(number: $0, color: .blue) }
+                        }
+                        Spacer()
+                        Button {
+                            store.remove(t)
+                        } label: {
+                            Image(systemName: "trash")
+                        }
+                        .buttonStyle(.borderless)
+                        .foregroundColor(.red)
                     }
                 }
-                .padding(.top, 4)
             }
+        }
+    }
+
+    private func previousYearSameMonth(last: Draw) -> Draw? {
+        let c = last.date.split(separator: "-")
+        guard c.count == 3, let y = Int(c[0]), let m = Int(c[1]) else { return nil }
+        let target = y - 1
+        return draws.first { d in
+            let dc = d.date.split(separator: "-")
+            guard dc.count == 3, let dy = Int(dc[0]), let dm = Int(dc[1]) else { return false }
+            return dy == target && dm == m
         }
     }
 }
