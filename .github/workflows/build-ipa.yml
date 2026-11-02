@@ -1,0 +1,49 @@
+name: Build iOS IPA
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Archive (no signing)
+        run: |
+          xcodebuild archive \
+            -project AppName.xcodeproj \
+            -scheme AppName \
+            -configuration Release \
+            -archivePath "$PWD/build/AppName.xcarchive" \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_STYLE=Manual
+
+      - name: Package unsigned IPA
+        run: |
+          mkdir -p export/Payload
+          cp -R build/AppName.xcarchive/Products/Applications/AppName.app export/Payload/
+          cd export
+          zip -r AppName-unsigned.ipa Payload
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AppName-unsigned-ipa
+          path: export/AppName-unsigned.ipa
+          if-no-files-found: error

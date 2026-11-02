@@ -1,0 +1,17 @@
+name: AppName
+options:
+  bundleIdPrefix: com.example
+  deploymentTarget:
+    iOS: "15.0"
+packages: {}
+targets:
+  AppName:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources/AppName
+    info:
+      path: Sources/AppName/Info.plist
+      properties:
+        UILaunchScreen: {}
+        CFBundleDisplayName: AppName
