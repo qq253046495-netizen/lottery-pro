@@ -15,9 +15,9 @@ jobs:
       - name: Install XcodeGen
         run: brew install xcodegen
 
-      - name: Refresh lottery data (best-effort)
+      - name: Refresh lottery data (best-effort, never writes fake data)
         continue-on-error: true
-        run: python3 scripts/fetch_lottery.py --n 150
+        run: python3 scripts/fetch_lottery.py --n 200 --no-fallback
 
       - name: Generate Xcode project
         run: xcodegen generate
